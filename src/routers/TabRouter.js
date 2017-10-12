@@ -211,6 +211,41 @@ export default (
         return null;
       }
 
+      // Let other tabs handle it and switch to the first tab that returns a new state
+      let index = state.index;
+      /* $FlowFixMe */
+      let routes: Array<NavigationState> = state.routes;
+      order.find((tabId: string, i: number) => {
+        const tabRouter = tabRouters[tabId];
+        if (i === index) {
+          return false;
+        }
+        let tabState = routes[i];
+        if (tabRouter) {
+          // console.log(`${order.join('-')}: Processing child router:`, {action, tabState});
+          tabState = tabRouter.getStateForAction(action, tabState);
+        }
+        if (!tabState) {
+          index = i;
+          return true;
+        }
+        if (tabState !== routes[i]) {
+          routes = [...routes];
+          routes[i] = tabState;
+          index = i;
+          return true;
+        }
+        return false;
+      });
+      // console.log(`${order.join('-')}: Processed other tabs:`, {lastIndex: state.index, index});
+      index = action.type === NavigationActions.SET_PARAMS ? state.index : index;
+      if (index !== state.index || routes !== state.routes) {
+        return {
+          ...state,
+          index,
+          routes,
+        };
+      }
       
       return state;
     },
